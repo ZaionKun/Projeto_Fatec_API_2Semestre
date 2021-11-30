@@ -1,0 +1,60 @@
+select * from pg_stat_statements
+
+/*10 Consultas mais demoradas*/
+SELECT total_exec_time, query
+FROM pg_stat_statements
+ORDER BY total_exec_time
+DESC LIMIT 10;
+
+/*Consultas mais demoradas em média*/
+SELECT mean_exec_time, query
+FROM pg_stat_statements
+ORDER BY mean_exec_time
+DESC LIMIT 10;
+
+/*Chamadas mais de 1000 vezes*/
+SELECT calls, query, total_exec_time
+FROM pg_stat_statements
+where calls > 1000;
+
+/*Tamanho banco dos bancos de dados excluindo os bancos do sistema, possibilidade de inserir só o banco em que estou logado*/
+SELECT
+	datname                                   AS banco,
+	pg_database_size(datname)                 AS tamanho,
+	pg_size_pretty(pg_database_size(datname)) AS tamanho_pretty
+FROM pg_database
+WHERE datname NOT IN ('template0', 'template1', 'postgres') /*Inserir o banco que estou logado*/
+ORDER BY tamanho DESC, banco ASC
+
+/*Tamanho banco dos bancos de dados excluindo os bancos do sistema*/
+(SELECT
+	datname                                   AS banco,
+	pg_database_size(datname)                 AS tamanho,
+	pg_size_pretty(pg_database_size(datname)) AS tamanho_pretty
+FROM pg_database
+WHERE datname NOT IN ('template0', 'template1', 'postgres') 
+ORDER BY tamanho DESC, banco ASC)
+
+UNION ALL
+
+(SELECT
+	'TOTAL'                                        AS banco,
+	sum(pg_database_size(datname))                 AS tamanho,
+	pg_size_pretty(sum(pg_database_size(datname))) AS tamanho_pretty
+FROM pg_database
+WHERE datname NOT IN ('template0', 'template1', 'postgres'));
+
+
+/*Tamanhos de tabelas*/
+SELECT esquema, tabela,
+       pg_size_pretty(pg_relation_size(esq_tab)) AS tamanho,
+       pg_size_pretty(pg_total_relation_size(esq_tab)) AS tamanho_total
+  FROM (SELECT tablename AS tabela,
+               schemaname AS esquema,
+               schemaname||'.'||tablename AS esq_tab
+          FROM pg_catalog.pg_tables
+         WHERE schemaname NOT
+            IN ('pg_catalog', 'information_schema', 'pg_toast') ) AS x
+ ORDER BY pg_total_relation_size(esq_tab) DESC;
+ 
+ 
